@@ -5,12 +5,46 @@
 
 #include "raylib.h"
 
-#define CELL_WIDTH 10
-#define CELL_HEIGHT 10
+#define CELL_WIDTH 9
+#define CELL_HEIGHT 9
 
 #define index(y,x) (y)*9 + (x)
 
 Font font;
+
+Color themeCol = (Color) {255, 128, 0, 255};
+bool lightTheme = false;
+
+Color bgCol;
+Color textCol;
+Color textDarkCol;
+Color highlightedCol;
+Color highlightedDarkCol;
+
+Color invertColor(Color col)
+{
+    return (Color) {255 - col.r, 255 - col.g, 255 - col.b, 255};
+}
+
+void createTheme(Color col)
+{
+    bgCol = (Color) {col.r / 4, col.g / 4, col.b / 4, col.a};
+    textCol = (Color) {128 + col.r / 2, 128 + col.g / 2, 128 + col.b / 2, col.a};
+    textDarkCol = (Color) {64 + col.r / 4, 64 + col.g / 4, 64 + col.b / 4, col.a};
+
+    highlightedCol = (Color) {col.r, col.g, col.b, col.a};
+    highlightedDarkCol = (Color) {col.r / 2, col.g / 2, col.b / 2, col.a};
+
+    if (lightTheme)
+    {
+        bgCol = invertColor(bgCol);
+        textCol = invertColor(textCol);
+        textDarkCol = invertColor(textDarkCol);
+
+        highlightedCol = invertColor(highlightedCol);
+        highlightedDarkCol = invertColor(highlightedDarkCol);
+    }
+}
 
 int board[9 * 9];
 bool highlighted [9 * 9];
@@ -71,7 +105,7 @@ void drawBoard()
                     convertRowToY(i + 1),
                     CELL_WIDTH * GetScreenHeight() / 100,
                     CELL_HEIGHT * GetScreenHeight() / 100,
-                    highlightedMouse ? ORANGE : BROWN
+                    highlightedMouse ? highlightedCol : highlightedDarkCol
                 );
             }
 
@@ -80,20 +114,20 @@ void drawBoard()
             char curr[1];
             sprintf(curr, "%d", board[index(i, j)]);
 
-            DrawTextEx(font, curr, (Vector2){x, y}, 40, 10, !highlightedMouse && !highlighted[index(i, j)] ? GRAY : WHITE);
+            DrawTextEx(font, curr, (Vector2){x, y}, 40, 10, !highlightedMouse && !highlighted[index(i, j)] ? textDarkCol : textCol);
         }
     }
 
     for (int i = 0; i <= 9; i ++)
     {
         int x = convertColToX(i);
-        DrawLine(x, convertRowToY(0), x, convertRowToY(9), i % 3 == 0 ? YELLOW : RAYWHITE);
+        DrawLine(x, convertRowToY(0), x, convertRowToY(9), i % 3 == 0 ? highlightedCol : textDarkCol);
     }
 
     for (int i = 0; i <= 9; i ++)
     {
         int y = convertRowToY(i);
-        DrawLine(convertColToX(0), y, convertColToX(9), y, i % 3 == 0 ? YELLOW : RAYWHITE);
+        DrawLine(convertColToX(0), y, convertColToX(9), y, i % 3 == 0 ? highlightedCol : textDarkCol);
     }
 }
 
@@ -183,12 +217,14 @@ bool eightQueens(int depth, int number)
 
 int main()
 {
+    createTheme(themeCol);
+
     for (int i = 0; i < 9 * 9; i ++) board[i] = -1;
     
     for (int i = 1; i <= 9; i ++) eightQueens(0, i);
 
     for (int i = 0; i < 9 * 9; i ++)
-        if (GetRandomValue(0, 100) >= 50) board[i] = -1;
+        if (GetRandomValue(0, 100) >= 70) board[i] = -1;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
@@ -199,8 +235,12 @@ int main()
 
     int cellX = -1, cellY = -1;
 
+    float time = 0;
+
     while(!WindowShouldClose())
     {
+        time += GetFrameTime();
+
         Vector2 mousePos = GetMousePosition();
 
         int mr = convertYToRow(mousePos.y);
@@ -230,17 +270,37 @@ int main()
         if (IsKeyPressed(KEY_U) && historyIndex > 0)
             board[history[--historyIndex]] = -1;
 
+        if (IsKeyPressed(KEY_R))
+        {
+            createTheme((Color) {GetRandomValue(0, 255), GetRandomValue(0, 255), GetRandomValue(0, 255), 255});
+        }
+
+        if (IsKeyPressed(KEY_L)) lightTheme = !lightTheme;
+
         BeginDrawing();
-        ClearBackground(isBoardValid() ? BLACK : RED);
+        ClearBackground(!isBoardValid() ? RED : count(-1) == 0 ? DARKGREEN : bgCol);
+
+        int minutes = (int) time / 60;
+        int seconds = ((int) time) % 60;
+
+        int secondsFirstDigit = seconds / 10;
+        int secondsSecondDigit = seconds % 10;
+
+        char clock[5];
+        sprintf(clock, "%d:%d%d", minutes, secondsFirstDigit, secondsSecondDigit);
+        DrawTextEx(font, clock, (Vector2) { GetScreenWidth() / 2 - 50, 50 }, 40, 10, highlightedCol);
 
         drawBoard();
 
         for (int i = 1; i <= 9; i ++)
         {
-            char curr[4];
-            sprintf(curr, "%d: %d", i, 9 - count(i));
+            int currCount = count(i);
+            if (9 - currCount == 0) continue;
 
-            DrawTextEx(font, curr, (Vector2) {50, 50 + i * 60}, 40, 10, YELLOW);
+            char curr[4];
+            sprintf(curr, "%d: %d", i, 9 - currCount);
+
+            DrawTextEx(font, curr, (Vector2) {50, 50 + i * 60}, 40, 10, GRAY);
         }
 
         EndDrawing();
