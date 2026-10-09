@@ -1,1 +1,1 @@
-gcc main.c -o output.o -l raylib && ./output.o
+gcc main.c -o output.o -l raylib -lm && ./output.o
