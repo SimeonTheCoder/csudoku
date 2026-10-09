@@ -97,17 +97,6 @@ void drawBoard()
     }
 }
 
-void generateBoard()
-{
-    for (int i = 0; i < 9; i ++)
-    {
-        for (int j = 0; j < 9; j ++)
-        {
-            board[index(i, j)] = GetRandomValue(0, 1) == 0 ? -1 : GetRandomValue(1, 9);
-        }
-    }
-}
-
 void highlight(int row, int col)
 {
     for (int i = 0; i < 9 * 9; i ++) highlighted[i] = false;
@@ -169,10 +158,37 @@ bool isBoardValid()
     return true;
 }
 
+bool eightQueens(int depth, int number)
+{
+    if (depth == 9) return true;
+
+    for (int i = 0; i < 9; i ++)
+    {
+        if (board[index(depth, i)] != -1) continue;
+
+        board[index(depth, i)] = number;
+
+        if (!isBoardValid())
+        {
+            board[index(depth, i)] = -1;
+            continue;
+        }
+
+        if (eightQueens(depth + 1, number)) return true;
+        else board[index(depth, i)] = -1;
+    }
+
+    return false;
+}
+
 int main()
 {
     for (int i = 0; i < 9 * 9; i ++) board[i] = -1;
-    // generateBoard();
+    
+    for (int i = 1; i <= 9; i ++) eightQueens(0, i);
+
+    for (int i = 0; i < 9 * 9; i ++)
+        if (GetRandomValue(0, 100) >= 50) board[i] = -1;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
@@ -180,6 +196,8 @@ int main()
     SetTargetFPS(120);
 
     font = LoadFont("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf");
+
+    int cellX = -1, cellY = -1;
 
     while(!WindowShouldClose())
     {
@@ -189,15 +207,21 @@ int main()
         int mc = convertXToCol(mousePos.x);
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
             highlight(mr, mc);
+            highlighted[index(mr, mc)] = true;
+            cellY = mr;
+            cellX = mc;
+        }
 
         for (int i = 1; i < 10; i ++)
         {
             if (!IsKeyPressed(48 + i)) continue;
-            if (board[index(mr, mc)] != -1) continue;
+            if (cellX == -1 || cellY == -1) continue;
+            if (board[index(cellY, cellX)] != -1) continue;
 
-            board[index(mr, mc)] = i;
-            history[historyIndex] = index(mr, mc);
+            board[index(cellY, cellX)] = i;
+            history[historyIndex] = index(cellY, cellX);
             historyIndex ++;
 
             break;
